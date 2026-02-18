@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0284c7;
+  --color-primary-light: #e0f2fe;
+  --color-primary-dark: #075985;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 0% 0%, #cffafe 0%, rgba(207, 250, 254, 0) 42%),
+    radial-gradient(circle at 100% 0%, #dbeafe 0%, rgba(219, 234, 254, 0) 38%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #0f172a;
+}
+
+@layer components {
+  .hero-panel {
+    @apply border border-sky-200/80 bg-gradient-to-br from-sky-50 via-white to-cyan-50 shadow-lg;
+  }
+
+  .lang-btn {
+    @apply rounded-md border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-600 transition hover:bg-slate-50;
+  }
+
+  .lang-btn-active {
+    @apply border-sky-300 bg-sky-100 text-sky-800;
+  }
+
+  .dropzone {
+    @apply cursor-pointer rounded-xl border-2 border-dashed border-sky-300 bg-white p-8 text-center transition;
+  }
+
+  .dropzone:hover {
+    @apply border-sky-400 bg-sky-50;
+  }
+
+  .dropzone-active {
+    @apply border-sky-500 bg-sky-100;
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-sky-600 px-6 py-3 font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .stat-card {
+    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  }
+
+  .stat-label {
+    @apply text-xs uppercase tracking-wide text-slate-500;
+  }
+
+  .stat-value {
+    @apply mt-1 text-2xl font-bold text-slate-900;
+  }
+
+  .field-input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200;
+  }
+
+  .preset-btn {
+    @apply rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition hover:bg-sky-100;
+  }
+
+  .preset-btn-muted {
+    @apply rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100;
+  }
+}
