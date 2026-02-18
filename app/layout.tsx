@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "@/styles/globals.css";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Image Compressor",
@@ -45,7 +47,13 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body>{children}</body>
+      <body>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </div>
+      </body>
     </html>
   );
 }
