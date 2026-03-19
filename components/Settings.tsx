@@ -121,10 +121,10 @@ const Settings: React.FC<SettingsProps> = ({
           }
           className="field-input"
         >
+          <option value="original">{t.originalDesc}</option>
           <option value="png">{t.pngDesc}</option>
           <option value="jpeg">{t.jpegDesc}</option>
           <option value="webp">{t.webpDesc}</option>
-          <option value="original">{t.originalDesc}</option>
         </select>
       </div>
 

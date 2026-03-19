@@ -5,9 +5,9 @@ import DropZone from "@/components/DropZone";
 import FileList from "@/components/FileList";
 import Settings from "@/components/Settings";
 import ResultCard from "@/components/ResultCard";
+import imageCompression from "browser-image-compression";
 import { CompressionOptions, CompressionResult } from "@/types";
 import { formatFileSize } from "@/utils/fileHelpers";
-import { saveAs } from "file-saver";
 
 type Locale = "zh" | "en";
 
@@ -85,7 +85,8 @@ const texts = {
     estimateTitle: "Pre-Compression Estimate",
     estimateOutput: "Estimated Output",
     estimateSaving: "Estimated Savings",
-    estimateTip: "Tip: estimate is calculated from format and settings, actual output may vary.",
+    estimateTip:
+      "Tip: estimate is calculated from format and settings, actual output may vary.",
     compressButton: "Compress and Download",
     compressingButton: "Compressing...",
     resultsTitle: "Compression Results",
@@ -96,20 +97,6 @@ const texts = {
     presetApplied: "Preset has been applied.",
   },
 };
-
-function parseDownloadFilename(contentDisposition: string | null): string {
-  if (!contentDisposition) return "compressed.png";
-  const encoded = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
-  if (encoded?.[1]) {
-    try {
-      return decodeURIComponent(encoded[1]);
-    } catch {
-      // ignore malformed value and fall back to filename=
-    }
-  }
-  const basic = contentDisposition.match(/filename="([^"]+)"/i);
-  return basic?.[1] ?? "compressed.png";
-}
 
 function estimateCompressionRatio(settings: CompressionOptions): number {
   const qualityRatio = Math.min(100, Math.max(10, settings.quality)) / 100;
@@ -190,9 +177,14 @@ export default function Home() {
       Math.round(selectedSummary.totalSize * ratio),
       files.length * 1024,
     );
-    const safeEstimatedSize = Math.min(estimatedSize, selectedSummary.totalSize);
+    const safeEstimatedSize = Math.min(
+      estimatedSize,
+      selectedSummary.totalSize,
+    );
     const savingSize = selectedSummary.totalSize - safeEstimatedSize;
-    const savingRate = Math.round((savingSize / selectedSummary.totalSize) * 100);
+    const savingRate = Math.round(
+      (savingSize / selectedSummary.totalSize) * 100,
+    );
 
     return {
       estimatedSize: safeEstimatedSize,
@@ -247,62 +239,61 @@ export default function Home() {
     setErrorMessage("");
     setInfoMessage("");
 
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append("images", file);
-    });
-    formData.append("options", JSON.stringify(settings));
-
     try {
-      const res = await fetch("/api/compress", {
-        method: "POST",
-        body: formData,
-      });
+      const processedFiles: CompressionResult[] = [];
 
-      if (!res.ok) {
-        let details = "Compression failed.";
+      for (const file of files) {
+        const options = {
+          maxSizeMB: settings.maxSide ? settings.maxSide / 1000 : 1,
+          maxWidthOrHeight: settings.maxSide || undefined,
+          useWebWorker: true,
+          fileType:
+            settings.outputFormat === "original"
+              ? file.type
+              : `image/${settings.outputFormat}`,
+          quality: settings.quality / 100,
+        };
+
         try {
-          const error = await res.json();
-          details = error.details || error.error || details;
-        } catch {
-          // keep default message
+          const compressedFile = await imageCompression(file, options);
+          const url = URL.createObjectURL(compressedFile);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${file.name.replace(/\.[^/.]+$/, "")}-compressed.${settings.outputFormat === "original" ? file.type.split("/")[1] : settings.outputFormat}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          processedFiles.push({
+            name: file.name,
+            originalSize: file.size,
+            compressedSize: compressedFile.size,
+            success: true,
+            format:
+              settings.outputFormat === "original"
+                ? file.type.split("/")[1]
+                : settings.outputFormat,
+          });
+        } catch (error: any) {
+          console.error(error);
+          setErrorMessage(t.failed(error.message));
+          processedFiles.push({
+            name: file.name,
+            originalSize: file.size,
+            compressedSize: 0,
+            success: false,
+            error: error.message,
+            format:
+              settings.outputFormat === "original"
+                ? file.type.split("/")[1]
+                : settings.outputFormat,
+          });
         }
-        throw new Error(details);
       }
 
-      const contentType = res.headers.get("content-type");
-
-      if (contentType?.includes("application/zip")) {
-        const blob = await res.blob();
-        saveAs(blob, "compressed-images.zip");
-        const originalSize = files.reduce((sum, file) => sum + file.size, 0);
-
-        setResults([
-          {
-            name: `${files.length} files`,
-            originalSize,
-            compressedSize: blob.size,
-            success: true,
-          },
-        ]);
-        setInfoMessage(t.doneBatch);
-      } else {
-        const blob = await res.blob();
-        const contentDisposition = res.headers.get("content-disposition");
-        const filename = parseDownloadFilename(contentDisposition);
-
-        saveAs(blob, filename);
-
-        setResults([
-          {
-            name: filename,
-            originalSize: files[0]?.size || 0,
-            compressedSize: blob.size,
-            success: true,
-          },
-        ]);
-        setInfoMessage(t.doneSingle);
-      }
+      setResults(processedFiles);
+      setInfoMessage(processedFiles.length > 1 ? t.doneBatch : t.doneSingle);
     } catch (error: any) {
       console.error(error);
       setErrorMessage(t.failed(error.message));
@@ -352,7 +343,9 @@ export default function Home() {
           </div>
           <div className="stat-card">
             <p className="stat-label">{t.totalSize}</p>
-            <p className="stat-value">{formatFileSize(selectedSummary.totalSize)}</p>
+            <p className="stat-value">
+              {formatFileSize(selectedSummary.totalSize)}
+            </p>
           </div>
           <div className="stat-card">
             <p className="stat-label">{t.status}</p>
@@ -364,18 +357,25 @@ export default function Home() {
       </section>
 
       <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">{t.estimateTitle}</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
+          {t.estimateTitle}
+        </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t.estimateOutput}</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              {t.estimateOutput}
+            </p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">
               {formatFileSize(estimatedSummary.estimatedSize)}
             </p>
           </div>
           <div className="rounded-xl bg-emerald-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-emerald-700">{t.estimateSaving}</p>
+            <p className="text-xs uppercase tracking-wide text-emerald-700">
+              {t.estimateSaving}
+            </p>
             <p className="mt-1 text-2xl font-semibold text-emerald-700">
-              {formatFileSize(estimatedSummary.savingSize)} ({estimatedSummary.savingRate}%)
+              {formatFileSize(estimatedSummary.savingSize)} (
+              {estimatedSummary.savingRate}%)
             </p>
           </div>
         </div>
@@ -402,7 +402,12 @@ export default function Home() {
 
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <DropZone onFilesAdded={handleFilesAdded} locale={locale} />
-        <FileList files={files} onRemove={removeFile} onClear={clearAll} locale={locale} />
+        <FileList
+          files={files}
+          onRemove={removeFile}
+          onClear={clearAll}
+          locale={locale}
+        />
       </div>
 
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -424,7 +429,9 @@ export default function Home() {
 
       {results.length > 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">{t.resultsTitle}</h2>
+          <h2 className="mb-4 text-xl font-semibold text-slate-900">
+            {t.resultsTitle}
+          </h2>
           {results.map((result, idx) => (
             <ResultCard key={idx} result={result} locale={locale} />
           ))}

@@ -17,4 +17,5 @@ export interface CompressionResult {
   compressedSize: number;
   success: boolean;
   error?: string;
+  format: string;
 }
