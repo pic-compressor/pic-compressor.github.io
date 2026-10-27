@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { LocaleProvider } from "@/components/LocaleProvider";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -11,8 +12,16 @@ export const metadata: Metadata = {
     default: "Pic Compressor — Free Online Image Tools",
     template: "%s | Pic Compressor",
   },
-  description: "Compress and convert JPG, PNG, WebP and GIF images directly in your browser. Free, private and easy to use.",
-  keywords: ["image compressor","compress images","JPG compressor","PNG compressor","WebP compressor","image tools"],
+  description:
+    "Compress and convert JPG, PNG, WebP and GIF images directly in your browser. Free, private and easy to use.",
+  keywords: [
+    "image compressor",
+    "compress images",
+    "JPG compressor",
+    "PNG compressor",
+    "WebP compressor",
+    "image tools",
+  ],
   icons: {
     icon: `${basePath}/favicon.svg`,
     apple: `${basePath}/favicon.svg`,
@@ -27,6 +36,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({children}:{children:React.ReactNode}) {
-  return <html lang="en"><body><div className="min-h-screen"><Header/><div>{children}</div><Footer/></div></body></html>;
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <div className="min-h-screen">
+          <LocaleProvider>
+            <Header />
+            <div>{children}</div>
+            <Footer />
+          </LocaleProvider>
+        </div>
+      </body>
+    </html>
+  );
 }
