@@ -13,7 +13,7 @@ export default function Header() {
     <header className="site-header">
       <div className="page-container header-inner">
         <Link href="/" className="brand" aria-label="Pic Compressor home">
-          <img src={`${basePath}/favicon.svg`} alt="" className="brand-mark" />
+          <img src={`/favicon.svg`} alt="" className="brand-mark" />
           <span>Pic Compressor</span>
         </Link>
         <nav
